@@ -1,5 +1,7 @@
 # TLS Alert
 
+![Screenshot](ss.png)
+
 ## Overview
 TLS Alert is a PHP-based tool that checks the expiration dates of TLS certificates for specified websites. It displays a report showing the expiration dates and sends email alerts when certificates are about to expire within a week. It also includes a debug mode for testing the email notification functionality.
 
