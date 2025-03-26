@@ -1,0 +1,25 @@
+# Ignore actual configuration file with sensitive information
+config.php
+
+# Ignore Composer dependencies
+/vendor/
+
+# Ignore log files
+*.log
+
+# Ignore PHPMailer cache
+.phpmailer/
+
+# Ignore environment-specific files
+.env
+.env.local
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/Editor folders
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
