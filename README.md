@@ -27,16 +27,25 @@ cp config.sample.php config.php
    - Configure the list of websites to monitor
    - Set the debug flag (1 to always send test emails, 0 for normal operation)
 
+5. Set up the cron job for automated checking:
+```bash
+# Make the setup script executable
+chmod +x setup_cron.sh
+
+# Run the setup script
+./setup_cron.sh
+```
+
 ## Usage
 1. Access the tool via web browser:
 ```
 http://your-server/tls_alert/index.php
 ```
 
-2. For automated checking, set up a cron job:
+2. For automated checking, the included setup script will configure a cron job to run daily at 16:30. You can also manually set up a cron job:
 ```bash
-# Run daily at 9:00 AM
-0 9 * * * /path/to/tls_alert/check_certificates.sh
+# Run daily at 16:30
+30 16 * * * /path/to/tls_alert/check_certificates.sh
 ```
 
 3. Debug mode:
@@ -81,16 +90,25 @@ cp config.sample.php config.php
    - 監視対象のウェブサイトリストを設定
    - デバッグフラグを設定（1：常にテストメールを送信、0：通常動作）
 
+5. 自動チェック用のcronジョブを設定します：
+```bash
+# セットアップスクリプトを実行可能にする
+chmod +x setup_cron.sh
+
+# セットアップスクリプトを実行
+./setup_cron.sh
+```
+
 ## 使い方
 1. ウェブブラウザからアクセスします：
 ```
 http://your-server/tls_alert/index.php
 ```
 
-2. 自動チェックのためにcronジョブを設定します：
+2. 自動チェックのために、付属のセットアップスクリプトが毎日16:30に実行されるcronジョブを設定します。手動でcronジョブを設定することもできます：
 ```bash
-# 毎日午前9時に実行
-0 9 * * * /path/to/tls_alert/check_certificates.sh
+# 毎日16:30に実行
+30 16 * * * /path/to/tls_alert/check_certificates.sh
 ```
 
 3. デバッグモード：
