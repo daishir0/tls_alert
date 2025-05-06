@@ -41,6 +41,53 @@ function logError($message) {
     file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
 }
 
+// Function to save expiry date to file
+function saveExpiryDate($url, $expiryDate) {
+    $expireFile = __DIR__ . '/expire.txt';
+    $content = "";
+    
+    // Read existing content if file exists
+    if (file_exists($expireFile)) {
+        $content = file_get_contents($expireFile);
+    }
+    
+    // Parse existing entries
+    $entries = [];
+    foreach (explode("\n", $content) as $line) {
+        if (empty($line)) continue;
+        list($savedUrl, $savedDate) = explode("|", $line);
+        $entries[$savedUrl] = $savedDate;
+    }
+    
+    // Update or add new entry
+    $entries[$url] = $expiryDate;
+    
+    // Write back to file
+    $newContent = "";
+    foreach ($entries as $savedUrl => $savedDate) {
+        $newContent .= "$savedUrl|$savedDate\n";
+    }
+    file_put_contents($expireFile, $newContent);
+}
+
+// Function to get saved expiry date
+function getSavedExpiryDate($url) {
+    $expireFile = __DIR__ . '/expire.txt';
+    if (!file_exists($expireFile)) {
+        return null;
+    }
+    
+    $content = file_get_contents($expireFile);
+    foreach (explode("\n", $content) as $line) {
+        if (empty($line)) continue;
+        list($savedUrl, $savedDate) = explode("|", $line);
+        if ($savedUrl === $url) {
+            return $savedDate;
+        }
+    }
+    return null;
+}
+
 // Function to check certificate expiration
 function checkCertificate($url) {
     $origUrl = $url;
@@ -84,6 +131,22 @@ function checkCertificate($url) {
         
         if (!$socket) {
             logError("Connection failed to $url: $errno $errstr");
+            // Try to get saved expiry date
+            $savedExpiryDate = getSavedExpiryDate($url);
+            if ($savedExpiryDate) {
+                $expiryTimestamp = strtotime($savedExpiryDate);
+                $currentTimestamp = time();
+                $daysRemaining = floor(($expiryTimestamp - $currentTimestamp) / (60 * 60 * 24));
+                
+                logError("Using saved expiry date for $url: $savedExpiryDate ($daysRemaining days remaining)");
+                
+                return [
+                    'error' => null,
+                    'expiry_date' => $savedExpiryDate,
+                    'days_remaining' => $daysRemaining,
+                    'using_saved_data' => true
+                ];
+            }
             return [
                 'error' => "Connection failed: $errno $errstr",
                 'expiry_date' => null,
@@ -96,6 +159,22 @@ function checkCertificate($url) {
         if (!isset($params['options']['ssl']['peer_certificate'])) {
             fclose($socket);
             logError("Could not get certificate for $url");
+            // Try to get saved expiry date
+            $savedExpiryDate = getSavedExpiryDate($url);
+            if ($savedExpiryDate) {
+                $expiryTimestamp = strtotime($savedExpiryDate);
+                $currentTimestamp = time();
+                $daysRemaining = floor(($expiryTimestamp - $currentTimestamp) / (60 * 60 * 24));
+                
+                logError("Using saved expiry date for $url: $savedExpiryDate ($daysRemaining days remaining)");
+                
+                return [
+                    'error' => null,
+                    'expiry_date' => $savedExpiryDate,
+                    'days_remaining' => $daysRemaining,
+                    'using_saved_data' => true
+                ];
+            }
             return [
                 'error' => 'Could not get certificate',
                 'expiry_date' => null,
@@ -108,6 +187,22 @@ function checkCertificate($url) {
         
         if (!$cert) {
             logError("Failed to parse certificate for $url");
+            // Try to get saved expiry date
+            $savedExpiryDate = getSavedExpiryDate($url);
+            if ($savedExpiryDate) {
+                $expiryTimestamp = strtotime($savedExpiryDate);
+                $currentTimestamp = time();
+                $daysRemaining = floor(($expiryTimestamp - $currentTimestamp) / (60 * 60 * 24));
+                
+                logError("Using saved expiry date for $url: $savedExpiryDate ($daysRemaining days remaining)");
+                
+                return [
+                    'error' => null,
+                    'expiry_date' => $savedExpiryDate,
+                    'days_remaining' => $daysRemaining,
+                    'using_saved_data' => true
+                ];
+            }
             return [
                 'error' => 'Failed to parse certificate',
                 'expiry_date' => null,
@@ -121,6 +216,9 @@ function checkCertificate($url) {
         $currentTimestamp = time();
         $daysRemaining = floor(($expiryTimestamp - $currentTimestamp) / (60 * 60 * 24));
         
+        // Save expiry date to file
+        saveExpiryDate($url, $expiryDate);
+        
         logError("Certificate for $url expires on $expiryDate ($daysRemaining days remaining)");
         
         return [
@@ -128,7 +226,8 @@ function checkCertificate($url) {
             'expiry_date' => $expiryDate,
             'days_remaining' => $daysRemaining,
             'subject' => isset($cert['subject']) ? $cert['subject'] : null,
-            'issuer' => isset($cert['issuer']) ? $cert['issuer'] : null
+            'issuer' => isset($cert['issuer']) ? $cert['issuer'] : null,
+            'using_saved_data' => false
         ];
     } catch (Exception $e) {
         logError("Exception checking $url: " . $e->getMessage());
@@ -293,6 +392,10 @@ $executionTime = round($endTime - $startTime, 2);
             margin: 20px;
             line-height: 1.6;
         }
+        .warning {
+            color: #ff6f00;
+            font-weight: bold;
+        }
         h1 {
             color: #333;
             border-bottom: 2px solid #eee;
@@ -420,8 +523,10 @@ $executionTime = round($endTime - $startTime, 2);
                                     <?php echo $result['email_sent'] ? 'メール送信済み' : 'メール送信失敗'; ?>
                                 <?php endif; ?>
                             </span>
-                        <?php elseif ($certInfo['error']): ?>
+                        <?php elseif ($certInfo['error'] && !isset($certInfo['using_saved_data'])): ?>
                             <span class="error">チェック失敗</span>
+                        <?php elseif (isset($certInfo['using_saved_data']) && $certInfo['using_saved_data']): ?>
+                            <span class="warning">保存済みデータを使用</span>
                         <?php elseif ($result['is_alert']): ?>
                             <span class="error">
                                 警告: 期限切れまで1週間未満
